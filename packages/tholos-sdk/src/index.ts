@@ -85,7 +85,13 @@ export const Errors = {
    * `set_stall_timeout` was called with a value greater than
    * `MAX_STALL_TIMEOUT_SECS`.
    */
-  26: {message:"InvalidStallTimeout"}
+  26: {message:"InvalidStallTimeout"},
+  /**
+   * The caller is on the snapshotted resolver committee and is also the
+   * assertion's asserter or disputer. A party voting on their own case
+   * biases (and, on a size-1 committee, determines) the outcome.
+   */
+  27: {message:"SelfVote"}
 }
 
 export type Status = {tag: "Pending", values: void} | {tag: "Disputed", values: void} | {tag: "Resolved", values: void};

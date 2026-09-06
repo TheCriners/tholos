@@ -563,6 +563,62 @@ fn test_asserter_cannot_dispute_own_assertion() {
 }
 
 #[test]
+fn test_resolver_cannot_vote_as_asserter() {
+    let f = Fixture::new();
+    let asserter = f.resolvers.get(0).unwrap();
+    f.mint(&asserter, DEFAULT_MINT);
+    let disputer = f.funded_address();
+
+    let id = f.client.assert_outcome(&asserter, &true);
+    f.client.dispute(&disputer, &id);
+
+    let result = f.client.try_resolve(&asserter, &id, &true);
+    assert_eq!(result, Err(Ok(Error::SelfVote)));
+    let state = f.client.get_assertion_state(&id);
+    assert_eq!(state.status, Status::Disputed);
+    assert_eq!(state.voted.len(), 0);
+    assert_eq!(state.votes_for_outcome, 0);
+    assert_eq!(state.votes_against_outcome, 0);
+}
+
+#[test]
+fn test_resolver_cannot_vote_as_disputer() {
+    let f = Fixture::new();
+    let asserter = f.funded_address();
+    let disputer = f.resolvers.get(0).unwrap();
+    f.mint(&disputer, DEFAULT_MINT);
+
+    let id = f.client.assert_outcome(&asserter, &true);
+    f.client.dispute(&disputer, &id);
+
+    let result = f.client.try_resolve(&disputer, &id, &false);
+    assert_eq!(result, Err(Ok(Error::SelfVote)));
+    let state = f.client.get_assertion_state(&id);
+    assert_eq!(state.status, Status::Disputed);
+    assert_eq!(state.voted.len(), 0);
+    assert_eq!(state.votes_for_outcome, 0);
+    assert_eq!(state.votes_against_outcome, 0);
+}
+
+#[test]
+fn test_neutral_resolver_can_still_vote() {
+    let f = Fixture::new();
+    let asserter = f.funded_address();
+    let disputer = f.funded_address();
+
+    let id = f.client.assert_outcome(&asserter, &true);
+    f.client.dispute(&disputer, &id);
+
+    let resolver = f.resolvers.get(0).unwrap();
+    let outcome = f.client.resolve(&resolver, &id, &true);
+    assert_eq!(outcome, None);
+    let state = f.client.get_assertion_state(&id);
+    assert_eq!(state.status, Status::Disputed);
+    assert_eq!(state.voted.len(), 1);
+    assert_eq!(state.votes_for_outcome, 1);
+}
+
+#[test]
 fn test_non_resolver_cannot_vote() {
     let f = Fixture::new();
     let asserter = f.funded_address();

@@ -66,6 +66,7 @@ State of an assertion: `Pending`, `Disputed`, or `Resolved`.
 | `RotationTargetAlreadyResolver` | The `new_resolver` named for addition is already on the committee (or equals `old_resolver`) |
 | `NotProposer` | Caller isn't the proposer and the proposal can still reach a majority, so can't cancel it |
 | `NoAdminRotationProposal` | `accept_admin` called without a pending admin proposal |
+| `SelfVote` | Resolver is also the assertion's asserter or disputer |
 
 ## Functions
 
@@ -212,7 +213,8 @@ Returns the asserted outcome. Fails with `ChallengeWindowOpen` if called too ear
 Casts one resolver's vote on a `Disputed` assertion. Requires `resolver`'s signature
 and that they're in the committee snapshotted when this assertion was disputed
 (`Assertion.resolvers`), not necessarily the live committee. Fails with `Paused` if
-paused, `NotAResolver`, `NotDisputed`, or `AlreadyVoted` as appropriate.
+paused, `NotAResolver`, `NotDisputed`, `AlreadyVoted`, or `SelfVote` (the
+resolver is also the assertion's `asserter` or `disputer`) as appropriate.
 
 Returns `None` if no side has reached a strict majority yet. Once a majority agrees,
 the winning side (asserter if the majority agreed with them, disputer otherwise)

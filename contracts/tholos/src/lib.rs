@@ -247,6 +247,10 @@ pub enum Error {
     /// `set_stall_timeout` was called with a value greater than
     /// `MAX_STALL_TIMEOUT_SECS`.
     InvalidStallTimeout = 26,
+    /// The caller is on the snapshotted resolver committee and is also the
+    /// assertion's asserter or disputer. A party voting on their own case
+    /// biases (and, on a size-1 committee, determines) the outcome.
+    SelfVote = 27,
 }
 
 const DAY_IN_LEDGERS: u32 = 17280;
@@ -1114,6 +1118,11 @@ impl Tholos {
         }
         if assertion.voted.contains(&resolver) {
             return Err(Error::AlreadyVoted);
+        }
+        // Same idea as `SelfDispute` on `dispute`: a party to the case must
+        // not sit on the committee vote that decides it.
+        if resolver == assertion.asserter || assertion.disputer.as_ref() == Some(&resolver) {
+            return Err(Error::SelfVote);
         }
 
         assertion.voted.push_back(resolver);
