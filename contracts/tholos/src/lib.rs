@@ -327,11 +327,15 @@ pub struct Tholos;
 #[contractimpl]
 impl Tholos {
     /// Initializes the contract. `resolvers` must have an odd length so a
-    /// simple majority vote can never tie. `finalize_reward_bps` sets the
-    /// fraction of the bond (in basis points, 0–1000) paid to whoever calls
-    /// `finalize` as an incentive for prompt finalization; 0 disables the
-    /// reward entirely and preserves the original behavior where the full
-    /// bond is returned to the asserter.
+    /// simple majority vote can never tie. Size-1 is legal. Combined with
+    /// `SelfVote` and the default stall timeout of 0, a dispute whose sole
+    /// resolver is also a party cannot reach a majority and cannot be
+    /// reclaimed — a documented liveness trade-off, not a hidden hole.
+    /// `finalize_reward_bps` sets the fraction of the bond (in basis
+    /// points, 0–1000) paid to whoever calls `finalize` as an incentive
+    /// for prompt finalization; 0 disables the reward entirely and
+    /// preserves the original behavior where the full bond is returned to
+    /// the asserter.
     pub fn initialize(
         env: Env,
         admin: Address,
@@ -1121,6 +1125,15 @@ impl Tholos {
         }
         // Same idea as `SelfDispute` on `dispute`: a party to the case must
         // not sit on the committee vote that decides it.
+        //
+        // Deliberate liveness trade-off: initialize / update_resolvers still
+        // accept any odd committee size, including 1. If the snapshot has
+        // fewer disinterested members than majority_threshold (size-1 with
+        // that member as a party; size-3 with both parties on the snapshot),
+        // SelfVote makes a strict majority unreachable. reclaim_stalled_dispute
+        // does not save this by default — stall timeout 0 is disabled — so
+        // those disputes stay Disputed with both bonds frozen. See
+        // test_size_one_conflicted_committee_cannot_resolve_when_stall_timeout_is_unset.
         if resolver == assertion.asserter || assertion.disputer.as_ref() == Some(&resolver) {
             return Err(Error::SelfVote);
         }
